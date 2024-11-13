@@ -1,0 +1,5 @@
+*/migrations
+*.sqlite3
+*.pyc
+/.venv
+*.csv
