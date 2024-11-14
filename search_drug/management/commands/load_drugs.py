@@ -1,54 +1,75 @@
-# scripts/load_drugs.py
-import csv
-import os
-import django
-from django.conf import settings
-
-
-
-# تنظیم پروژه Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
-
-# بارگذاری تنظیمات و راه‌اندازی Django
-try:
-    django.setup()
-except django.core.exceptions.ImproperlyConfigured as e:
-    print(f"Error in Django setup: {e}")
-    exit(1)
-
+import pandas as pd
+from django.core.management.base import BaseCommand
 from search_drug.models import Drug
-def load_drugs_from_csv(file_path):
-    if not os.path.exists(file_path):
-        print(f"File not found: {file_path}")
-        return
+from django.db import transaction
 
-    with open(file_path, 'r', encoding='utf-8') as file:
-        reader = csv.DictReader(file)
+class Command(BaseCommand):
+    help = 'Load drugs from CSV file into the database using pandas'
 
-        required_fields = ['generic_name_eng', 'generic_name_fa', 'drug_brand', 'shape_of_drug', 'drug_dose', 'ATC_code']
-        missing_fields = [field for field in required_fields if field not in reader.fieldnames]
+    def add_arguments(self, parser):
+        # Argument for dry run
+        parser.add_argument(
+            '--dry-run',
+            action='store_true',
+            help='Simulate the data loading without saving to the database.'
+        )
 
-        if missing_fields:
-            print(f"Missing required fields in CSV header: {', '.join(missing_fields)}")
-            return
+    def handle(self, *args, **options):
+        file_path = 'C:/Users/Bartar/OneDrive/Apps/Desktop/projects/drugs_medogram/drug/search_drug/management/commands/drugs.csv'
+        dry_run = options['dry_run']
+        
+        try:
+            # خواندن فایل CSV با استفاده از pandas
+            df = pd.read_csv(file_path, encoding='utf-8')
 
-        for row in reader:
-            try:
-                Drug.objects.create(
-                    generic_name_eng=row['generic_name_eng'],
-                    generic_name_fa=row['generic_name_fa'],
-                    drug_brand=row['drug_brand'],
-                    shape_of_drug=row['shape_of_drug'],
-                    drug_dose=row['drug_dose'],
-                    ATC_code=row['ATC_code'],
+            # بررسی اینکه تمام ستون‌های مورد نیاز وجود دارند
+            required_columns = ['generic_name_eng', 'generic_name_fa', 'drug_dose']
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                self.stdout.write(self.style.ERROR(f"CSV file is missing these required columns: {missing_columns}"))
+                return
+
+            # حذف ردیف‌هایی که فیلدهای ضروری آن‌ها خالی است
+            initial_row_count = len(df)
+            df = df.dropna(subset=['generic_name_eng', 'generic_name_fa', 'drug_dose'])
+            cleaned_row_count = len(df)
+            removed_rows = initial_row_count - cleaned_row_count
+
+            if removed_rows > 0:
+                self.stdout.write(self.style.WARNING(f"{removed_rows} rows were removed due to missing required fields."))
+
+            # ایجاد لیستی از اشیاء Drug برای ذخیره در دیتابیس
+            drugs_to_create = []
+            for _, row in df.iterrows():
+                # تابع strip() فقط برای رشته‌ها استفاده می‌شود
+                def safe_strip(val):
+                    if isinstance(val, str):
+                        return val.strip()
+                    return val
+
+                drug = Drug(
+                    generic_name_eng=safe_strip(row.get('generic_name_eng')),
+                    generic_name_fa=safe_strip(row.get('generic_name_fa')),
+                    drug_brand=safe_strip(row.get('drug_brand')) or None,
+                    shape_of_drug=safe_strip(row.get('shape_of_drug')) or None,
+                    drug_dose=safe_strip(row.get('drug_dose')) or None,
+                    ATC_code=safe_strip(row.get('ATC_code')) or None
                 )
-            except Exception as e:
-                print(f"Error importing row {row}: {e}")
-                continue
+                drugs_to_create.append(drug)
 
-    print('Successfully loaded drugs into the database')
+            # Dry run: فقط نمایش تعداد رکوردهایی که وارد می‌شدند
+            if dry_run:
+                self.stdout.write(self.style.WARNING(f"Dry run completed. {len(drugs_to_create)} records would have been inserted."))
+            else:
+                # ذخیره اطلاعات در دیتابیس
+                if drugs_to_create:
+                    with transaction.atomic():
+                        Drug.objects.bulk_create(drugs_to_create)
+                    self.stdout.write(self.style.SUCCESS(f'Successfully loaded {len(drugs_to_create)} drugs into the database.'))
 
-
-if __name__ == "__main__":
-    file_path = settings.CSV_FILE_PATH
-    load_drugs_from_csv(file_path)
+        except FileNotFoundError:
+            self.stdout.write(self.style.ERROR(f"File {file_path} not found. Please check the path."))
+        except pd.errors.EmptyDataError:
+            self.stdout.write(self.style.ERROR(f"CSV file is empty or corrupted."))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"An unexpected error occurred: {e}"))
