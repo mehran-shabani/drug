@@ -1,28 +1,54 @@
-# search_drug/management/commands/load_drugs.py
-
+# scripts/load_drugs.py
 import csv
-from django.core.management.base import BaseCommand
-from search_drug.models import Drug  # مسیر دقیق فایل مدل‌ها
+import os
+import django
+from django.conf import settings
 
-class Command(BaseCommand):
-    help = 'Load drugs from CSV file into the database'
 
-    def handle(self, *args, **kwargs):
-        file_path = 'C:/Users/Bartar/OneDrive/Apps/Desktop/projects/drugs_medogram/drug/search_drug/management/commands/drugs.csv'
-        try:
-            with open(file_path, 'r', encoding='utf-8') as file:
-                reader = csv.DictReader(file)
-                for row in reader:
-                    Drug.objects.create(
-                        generic_name_eng=row.get('generic_name_eng', ''),
-                        generic_name_fa=row.get('generic_name_fa', ''),
-                        drug_brand=row.get('drug_brand', ''),
-                        shape_of_drug=row.get('shape_of_drug', ''),
-                        drug_dose=row.get('drug_dose', ''),
-                        ATC_code=row.get('ATC_code', ''),
-                    )
-            self.stdout.write(self.style.SUCCESS('Successfully loaded drugs into the database'))
-        except FileNotFoundError:
-            self.stdout.write(self.style.ERROR(f"File {file_path} not found. Please check the path."))
-        except KeyError as e:
-            self.stdout.write(self.style.ERROR(f"Column not found in CSV: {e}"))
+
+# تنظیم پروژه Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
+
+# بارگذاری تنظیمات و راه‌اندازی Django
+try:
+    django.setup()
+except django.core.exceptions.ImproperlyConfigured as e:
+    print(f"Error in Django setup: {e}")
+    exit(1)
+
+from search_drug.models import Drug
+def load_drugs_from_csv(file_path):
+    if not os.path.exists(file_path):
+        print(f"File not found: {file_path}")
+        return
+
+    with open(file_path, 'r', encoding='utf-8') as file:
+        reader = csv.DictReader(file)
+
+        required_fields = ['generic_name_eng', 'generic_name_fa', 'drug_brand', 'shape_of_drug', 'drug_dose', 'ATC_code']
+        missing_fields = [field for field in required_fields if field not in reader.fieldnames]
+
+        if missing_fields:
+            print(f"Missing required fields in CSV header: {', '.join(missing_fields)}")
+            return
+
+        for row in reader:
+            try:
+                Drug.objects.create(
+                    generic_name_eng=row['generic_name_eng'],
+                    generic_name_fa=row['generic_name_fa'],
+                    drug_brand=row['drug_brand'],
+                    shape_of_drug=row['shape_of_drug'],
+                    drug_dose=row['drug_dose'],
+                    ATC_code=row['ATC_code'],
+                )
+            except Exception as e:
+                print(f"Error importing row {row}: {e}")
+                continue
+
+    print('Successfully loaded drugs into the database')
+
+
+if __name__ == "__main__":
+    file_path = settings.CSV_FILE_PATH
+    load_drugs_from_csv(file_path)
