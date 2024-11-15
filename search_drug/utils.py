@@ -59,8 +59,8 @@ def create_prescription(first_name, last_name, national_code, sick_name, medicat
             temp_logo_path = "temp_logo.png"
             img.save(temp_logo_path)
 
-            logo_width = 100
-            logo_height = 60
+            logo_width = 90
+            logo_height = 59
             logo_x = (width - logo_width) / 2
             logo_y = height - margin - 60
 
@@ -144,8 +144,8 @@ def create_prescription(first_name, last_name, national_code, sick_name, medicat
         c.drawRightString(width - inner_margin - 10, margin + 250, doctor_info)
 
         # جای امضا
-        signature_image_path = os.path.join(os.path.dirname(__file__), 'logo1.png')
-        c.drawImage(signature_image_path, width - inner_margin - 300, margin + 160, width=100, height=60)
+        signature_image_path = os.path.join(os.path.dirname(__file__), 'signature.png')
+        c.drawImage(signature_image_path, width - inner_margin - 327, margin + 160, width=150, height=100)
 
         # QR code
         qr_path = create_qr_code(verification_url)
