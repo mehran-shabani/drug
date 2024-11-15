@@ -60,7 +60,7 @@ def create_prescription(first_name, last_name, national_code, sick_name, medicat
             img.save(temp_logo_path)
 
             logo_width = 100
-            logo_height = 40
+            logo_height = 60
             logo_x = (width - logo_width) / 2
             logo_y = height - margin - 60
 
@@ -140,7 +140,7 @@ def create_prescription(first_name, last_name, national_code, sick_name, medicat
 
         # اطلاعات پزشک در بالای امضا
         c.setFont('Helvetica', 12)
-        doctor_info = "Dr. Shabani Shahreza N.P: 168396"
+        doctor_info = "Dr. Shabani Shahreza 168396"
         c.drawRightString(width - inner_margin - 10, margin + 250, doctor_info)
 
         # جای امضا
@@ -163,7 +163,7 @@ def create_prescription(first_name, last_name, national_code, sick_name, medicat
 
         # متن پایین صفحه
         c.setFont('Helvetica', 11)
-        footer_text = "MEDOGRAM ONLINE Visit"
+        footer_text = "Medogram Visit Online"
         c.drawCentredString(width / 2, margin + 20, footer_text)
 
         c.save()

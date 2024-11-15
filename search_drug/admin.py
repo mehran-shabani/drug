@@ -1,30 +1,51 @@
 from django.contrib import admin
 from .models import Order, OrderMedication
+from .utils import create_prescription
 
 class OrderMedicationInline(admin.TabularInline):
     model = OrderMedication
-    extra = 1  # تعداد فرم‌های اضافی برای اضافه کردن دارو
+    extra = 1 
 
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('patient_first_name', 'patient_last_name', 'patient_national_code', 'disease_name')
-    search_fields = ['patient_first_name', 'patient_last_name', 'patient_national_code']
+    list_display = ('first_name', 'last_name', 'national_code', 'disease_name')
+    actions = ['generate_pdf']  # اضافه کردن اکشن به لیست اکشن‌ها
+    search_fields = ['first_name', 'last_name', 'national_code']
     inlines = [OrderMedicationInline]
 
-    # اضافه کردن فیلد لینک دانلود به صفحه ادمین
     fieldsets = (
         ('اطلاعات بیمار', {
-            'fields': ('patient_first_name', 'patient_last_name', 'patient_national_code', 'disease_name', 'prescription_note')
-        }),
-        ('لینک دانلود نسخه', {
-            'fields': ('download_link',)  # این فیلد را برای وارد کردن لینک دستی اضافه می‌کنیم
+            'fields': ('first_name', 'last_name', 'national_code', 'disease_name')
         }),
     )
+    
+    def generate_pdf(self, request, queryset):
+        for order in queryset:
+            first_name = order.first_name
+            last_name = order.last_name
+            national_code = order.national_code
+            disease_name = order.disease_name
 
-    # اضافه کردن لینک دانلود به نمایش لیست سفارشات در پنل ادمین
-    def download_link(self, obj):
-        return f"<a href='{obj.download_link}' target='_blank'>دانلود نسخه</a>"
-    download_link.allow_tags = True
-    download_link.short_description = 'لینک دانلود'
+            # ساخت لیست داروها
+            medications = [
+                f"{(med.drug.generic_name_eng).lower()}({med.drug.drug_dose}) - {med.instructions} {med.count}"
+                for med in order.medications.all()
+            ]
+            
+            verification_url = f"https://api.medogram.ir/api/order/verification/{order.national_code}"
 
-# ثبت مدل Order در ادمین
+            # ایجاد فایل PDF نسخه
+            create_prescription(
+                first_name,
+                last_name,
+                national_code,
+                disease_name,
+                medications,
+                verification_url
+            )
+            # پیام موفقیت در ادمین
+            self.message_user(request, f"PDF for order {order.id} created successfully.")
+
+    generate_pdf.short_description = "Generate pdf" 
+
+# ثبت مدل در ادمین
 admin.site.register(Order, OrderAdmin)
