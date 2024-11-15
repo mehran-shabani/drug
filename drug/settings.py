@@ -39,7 +39,7 @@ ROOT_URLCONF = 'drug.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -132,3 +132,6 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+
+LOGIN_REDIRECT_URL = '/create-order/'
+LOGOUT_REDIRECT_URL = '/login/'
