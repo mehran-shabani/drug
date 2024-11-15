@@ -30,7 +30,7 @@ def create_qr_code(url):
 
 def create_prescription(first_name, last_name, national_code, sick_name, medications, verification_url):
     try:
-        output_dir = os.path.join('pdf')  # مسیر ذخیره‌سازی فایل
+        output_dir = os.path.join('media/pdf')  # مسیر ذخیره‌سازی فایل
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -174,26 +174,4 @@ def create_prescription(first_name, last_name, national_code, sick_name, medicat
     except Exception as e:
         logging.error(f"Error in creating PDF for {national_code}: {str(e)}")
         return False
-    
 
-def test_create_prescription():
-    # اطلاعات نمونه
-    first_name = "Ali"
-    last_name = "Rezaei"
-    national_code = "1234567890"
-    sick_name = "Common Cold"
-    medications = ["1-Paracetamol 500mg - 3 times a day", "2-Cough Syrup 10ml - as needed", '3-Indomethacin 250MG - 3 TIMES A DAY',
-                    "4-Paracetamol 500mg - 3 times a day", "5-Paracetamol 500mg - 3 times a day",
-                      "6-Paracetamol 500mg - 3 times a day", "7-Paracetamol 500mg - 3 times a day", "8-Paracetamol 500mg - 3 times a day"]
-    verification_url = "http://example.com/verify"
-
-    # فراخوانی تابع اصلی برای تولید PDF
-    success = create_prescription(first_name, last_name, national_code, sick_name, medications, verification_url)
-    
-    if success:
-        print("Test passed: Prescription PDF created successfully.")
-    else:
-        print("Test failed: Error in creating Prescription PDF.")
-
-#  تابع آزمایشی
-test_create_prescription()

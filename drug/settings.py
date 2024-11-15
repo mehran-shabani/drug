@@ -88,7 +88,8 @@ USE_I18N = True
 
 USE_TZ = True
 
-
+MEDIA_ROOT = 'media'
+MEDIA_URL = 'media/'
 
 STATIC_URL = 'static/'
 
